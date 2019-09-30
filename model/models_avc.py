@@ -31,8 +31,7 @@ def Conv3x3(in_ch, out_ch, stride):
     """ 3x3 convolution with padding """
     conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=3, stride=stride, 
                      padding=1)
-    #conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=3, stride=stride, 
-    #                 padding=1, groups=groups, bias=False)
+    
     return conv
 
 def Conv1x1(in_ch, out_ch, stride=1):
@@ -41,7 +40,7 @@ def Conv1x1(in_ch, out_ch, stride=1):
     return conv
 
 class BasicBlock(nn.Module):
-  """ Basic block: [(3x3, out_ch) ; (3x3, out) conv + BN + ReLU] """
+  """ Basic conv block"""
   
   def __init__(self, in_ch, out_ch, stride, ps, norm):
     
@@ -77,8 +76,8 @@ class AudNet(nn.Module):
       super(AudNet, self).__init__()
 
       out_ch = [64, 128, 256, 512]
-      #self.c1 = BasicBlock(in_ch=1, out_ch=out_ch[0], stride=1, ps=2, norm=norm) #for log-mel spect features
-      self.c1 = BasicBlock(in_ch=1, out_ch=out_ch[0], stride=2, ps=2) #for spectrogram features as in Objects that Sound paper
+      #for spectrogram features as mentioned in Objects that Sound paper
+      self.c1 = BasicBlock(in_ch=1, out_ch=out_ch[0], stride=2, ps=2) 
       self.c2 = BasicBlock(in_ch=out_ch[0], out_ch=out_ch[1], stride=1, ps=2, norm=norm)
       self.c3 = BasicBlock(in_ch=out_ch[1], out_ch=out_ch[2], stride=1, ps=2, norm=norm)
       self.c4 = BasicBlock(in_ch=out_ch[2], out_ch=out_ch[3], stride=1, ps=2, norm=norm)
@@ -86,15 +85,6 @@ class AudNet(nn.Module):
       self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
       self.pool_final = nn.MaxPool2d(kernel_size=(16, 12), stride=(16, 12))
 
-#      self.features = nn.Sequential(
-#                  self.c1,
-#                  self.pool,
-#                  self.c2,
-#                  self.pool,
-#                  self.c3,
-#                  self.pool,
-#                  self.c4,
-#                  self.pool_final)
 
       fc_dim = 128
       self.norm = F.normalize
@@ -124,9 +114,6 @@ class AudNet(nn.Module):
       #print("c4 features", out.shape)
       out = self.pool_final(out)
       #print("aud features:", out.shape)
-      
-      
-      ##out = self.features(x)
       
       out = out.view(out.shape[0], -1)
       #print("flatten:", out.shape)
@@ -159,15 +146,6 @@ class VisNet(nn.Module):
       self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
       self.pool_final = nn.MaxPool2d(kernel_size=14, stride=14)
 
-#      self.features = nn.Sequential(
-#                  self.c1,
-#                  self.pool,
-#                  self.c2,
-#                  self.pool,
-#                  self.c3,
-#                  self.pool,
-#                  self.c4,
-#                  self.pool_final)
 
       fc_dim = 128
       self.norm = F.normalize
@@ -214,10 +192,10 @@ class VisNet(nn.Module):
 
 
 
-class AVCNet(nn.Module):
+class AVENet(nn.Module):
   def __init__(self, n_cls, norm, init_wts=True):
 
-      super(AVCNet, self).__init__()
+      super(AVENet, self).__init__()
 
       self.num_class = n_cls
       
@@ -248,8 +226,6 @@ class AVCNet(nn.Module):
       out = self.av_classifier(out)
       #print("av_classifier:", out.shape)
       
-##      out = self.output(out)
-##      print("av_out:", out.shape)
       return out, av_dist, v_out, a_out
 
 
@@ -269,12 +245,13 @@ class AVCNet(nn.Module):
 
   def getEmbCor(self, x_1, x_2):
       """Get correlation between input embeddings """
+    
       print(x_1.shape, x_2.shape) 
       #euclidean distance between embeddings
       dist = F.mse_loss(x_1, x_2, reduction='none').mean(1)
-      print("dist:", dist.shape)
+      #print("dist:", dist.shape)
       out = dist.view(dist.shape[0], 1)
-      print("extend:", out.shape)
+      #print("extend:", out.shape)
       out = self.av_classifier(out)
       out = F.softmax(out, dim=1)
       
